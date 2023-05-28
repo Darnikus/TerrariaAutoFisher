@@ -1,16 +1,27 @@
-# This is a sample Python script.
+import cv2 as cv
+from windowcapturer import WindowCapturer
+from time import time
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    window_name = "Terraria:"
+    capturer = WindowCapturer(window_name)
+    loop_time = time()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    capturer.start()
+
+    while True:
+        if capturer.screenshot is None:
+            continue
+
+        cv.imshow('123', capturer.screenshot)
+
+        # show loop fps
+        print('FPS {}'.format(1 / (time() - loop_time)))
+        loop_time = time()
+
+        if cv.waitKey(1) == ord('q'):
+            cv.destroyAllWindows()
+            capturer.stop()
+            break
+
+    print('Done')
