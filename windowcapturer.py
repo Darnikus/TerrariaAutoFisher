@@ -23,7 +23,7 @@ class WindowCapturer:
         Initialize the WindowCapturer instance.
 
         :param window_name: The partial name of the window to capture.
-                            It can even be a full name, but because Terraria's window name changes every time,
+                            It can even be a full name, but because the Terraria window name changes every time,
                             it's recommended to use the immutable part of it.
         :type: str
 
@@ -38,7 +38,7 @@ class WindowCapturer:
 
         self.hwnd = self.__get_hwnd_by_partial_name(window_name)
         if not self.hwnd:
-            raise Exception('Window not found: {}'.format(window_name))
+            raise Exception('Window is not found: {}'.format(window_name))
 
         window_rect = win32gui.GetWindowRect(self.hwnd)
         self.width = window_rect[2] - window_rect[0]
@@ -59,7 +59,7 @@ class WindowCapturer:
         Start the capturing thread.
         """
 
-        thread = Thread(target=self.run)
+        thread = Thread(target=self.__run)
         thread.start()
 
     def stop(self):
@@ -69,7 +69,7 @@ class WindowCapturer:
 
         self._stop_event.set()
 
-    def run(self):
+    def __run(self):
         """
         Main capturing loop.
         """
@@ -81,14 +81,13 @@ class WindowCapturer:
             self.screenshot = screenshot
             self._lock.release()
 
-    # translate a pixel position on a screenshot image to a pixel position on the screen.
-    # pos = (x, y)
-    # WARNING: if you move the window being captured after execution is started, this will
-    # return incorrect coordinates, because the window position is only calculated in
-    # the __init__ constructor.
     def get_screen_position(self, position):
         """
         Translate a pixel position on a screenshot image to a pixel position on the screen.
+
+        WARNING: if you move the window being captured after execution is started, this will
+        return incorrect coordinates, because the window position is only calculated in
+        the __init__ constructor.
 
         :param position: The pixel position on the screenshot image (x, y).
         :type position: tuple
