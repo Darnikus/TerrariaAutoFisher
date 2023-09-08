@@ -27,6 +27,10 @@ class Vision:
 
         self.screenshot = None
 
+        self.tracker = cv2.TrackerMIL_create()
+        self._tracking_event = Event()
+        self.coordinates = []
+
         # This will probably need to be changed to an array of detected bobbers in the future
         self.detected_image = None
 
@@ -45,6 +49,7 @@ class Vision:
         """
         Stop the detecting thread.
         """
+
         self._stop_event.set()
 
     def update(self, screenshot):
@@ -79,15 +84,39 @@ class Vision:
         """
 
         image = self.screenshot
-        results = self.model.predict(self.screenshot, stream=True)
+
+        # verbose False to hide prediction log
+        results = self.model.predict(self.screenshot, stream=True, verbose=False)
 
         for r in results:
             for box in r.boxes:
-                x1, y1, x2, y2 = box.xyxy[0]
-                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-
                 conf = math.ceil((box.conf[0]) * 100) / 100
                 if conf >= self.MIN_CONFIDENT_THRESHOLD:
+                    x1, y1, x2, y2 = [int(i) for i in box.xyxy[0]]
+                    mid_x, mid_y = int((x1 + x2) / 2), int((y1 + y2) / 2)
+
+                    if not self._tracking_event.is_set():
+                        (x, y, w, h) = [int(i) for i in box.xywh[0]]
+                        self.tracker.init(image, (x, y, w, h))
+                        self._tracking_event.set()
+                    else:
+                        success, _ = self.tracker.update(image)
+                        if success:
+
+                            # Maybe later for the sake of performance only first coordinates of a bobber will be added
+                            if (mid_x, mid_y) not in self.coordinates:
+                                self.coordinates.append((mid_x, mid_y))
+
+                            if len(self.coordinates) > 1:
+                                prev_x, prev_y = self.coordinates[-2]
+                                diff_x, diff_y = abs(mid_x - prev_x), abs(mid_y - prev_y)
+                                if diff_x > 2 or diff_y > 2:
+                                    print("Coordinate difference exceeds"
+                                          f"\n diff_x {diff_x}"
+                                          f"\n diff_y {diff_y}")
+
+                                    self.coordinates.clear()
+
                     # Bounding box visualization
                     cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 1)
 
@@ -100,5 +129,16 @@ class Vision:
                     # Prints the text
                     cv2.putText(image, f'{conf}',
                                 (max(0, (x1 - 5)), max(35, (y1 - 5))), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (36, 255, 12), 1)
+
+                    # Draw a marker in the center of the bounding box
+                    cv2.drawMarker(image, (mid_x, mid_y), (0, 0, 255), markerType=cv2.MARKER_DIAMOND,
+                                   markerSize=4)
+
+                    cv2.putText(image, f'Center X: {mid_x}', (100, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
+                                (0, 255, 0),
+                                2)
+                    cv2.putText(image, f'Center Y: {mid_y}', (100, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
+                                (0, 255, 0),
+                                2)
 
         return image
