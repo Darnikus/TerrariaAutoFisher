@@ -1,10 +1,13 @@
+from time import time
+
 import cv2 as cv
 
 from vision import Vision
 from windowcapturer import WindowCapturer
-from time import time
 
 if __name__ == '__main__':
+    DEBUG = True
+
     window_name = "Terraria:"
     vision = Vision()
     capturer = WindowCapturer(window_name)
@@ -34,7 +37,9 @@ if __name__ == '__main__':
         # print('FPS {}'.format(round(fps)))
         loop_time = time()
 
-        cv.imshow('Debug window', vision.detected_image)
+        if DEBUG:
+            # display debug window
+            cv.imshow('Debug window', vision.detected_image)
 
         if cv.waitKey(1) == ord('q'):
             cv.destroyAllWindows()

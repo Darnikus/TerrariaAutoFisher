@@ -1,6 +1,8 @@
 import math
 from threading import Thread, Lock, Event
+
 import cv2
+import pyautogui
 from ultralytics import YOLO
 
 
@@ -110,10 +112,16 @@ class Vision:
                             if len(self.coordinates) > 1:
                                 prev_x, prev_y = self.coordinates[-2]
                                 diff_x, diff_y = abs(mid_x - prev_x), abs(mid_y - prev_y)
-                                if diff_x > 2 or diff_y > 2:
+
+                                # TODO Fix the problem when bot implementation. This condition need to be calibrated,
+                                #  because the difference of coordinates is registered before bobber reaches water.
+                                if (diff_x > 2 or diff_y > 2) and not (diff_x > 6 or diff_y > 6):
                                     print("Coordinate difference exceeds"
                                           f"\n diff_x {diff_x}"
                                           f"\n diff_y {diff_y}")
+
+                                    pyautogui.mouseDown()
+                                    pyautogui.mouseUp()
 
                                     self.coordinates.clear()
 
