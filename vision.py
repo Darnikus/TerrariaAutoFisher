@@ -1,8 +1,7 @@
 import math
-from threading import Thread, Lock, Event
+from multiprocessing import Process, Queue, Event
 
 import cv2
-import pyautogui
 from ultralytics import YOLO
 
 
@@ -21,38 +20,46 @@ class Vision:
     float: The value of minimum threshold when detected object is being considered
     """
 
-    def __init__(self):
+    def __init__(self, frame_queue: Queue, detected_queue: Queue):
+        """
+        Initialize the Vision instance.
 
-        # creating a lock object for thread
-        self._lock = Lock()
+        :param: frame_queue: The queue for the process to store frames
+        :type: Queue
+
+        :param detected_queue: The queue for the process to store image (in the future coordinates) with the detected
+                               bobber
+        :type: Queue
+        """
+
+        # process properties
+        self._process = None
         self._stop_event = Event()
+        self.frame_queue = frame_queue
+        self.detected_queue = detected_queue
 
-        self.screenshot = None
+        # self.tracker = cv2.TrackerMIL_create()
+        # self._tracking_event = Event()
+        # self.coordinates = []
 
-        self.tracker = cv2.TrackerMIL_create()
-        self._tracking_event = Event()
-        self.coordinates = []
+        self._model = YOLO(self.PATH_TO_MODEL, task='detect')
 
-        # This will probably need to be changed to an array of detected bobbers in the future
-        self.detected_image = None
-
-        self.model = YOLO(self.PATH_TO_MODEL, task='detect')
-
-    # Declaring thread methods
+    # Declaring process methods
     def start(self):
         """
-        Start the detecting thread.
+        Start the detecting process.
         """
 
-        thread = Thread(target=self.__run)
-        thread.start()
+        self._process = Process(target=self._run)
+        self._process.start()
 
     def stop(self):
         """
-        Stop the detecting thread.
+        Stop the detecting process.
         """
 
         self._stop_event.set()
+        self._process.terminate()
 
     def update(self, screenshot):
         """
@@ -60,23 +67,17 @@ class Vision:
 
         :param screenshot: A screenshot of the window from WindowCapturer
         """
+        ...
 
-        self._lock.acquire()
-        self.screenshot = screenshot
-        self._lock.release()
-
-    def __run(self):
+    def _run(self):
         """
         Main detecting loop.
         """
 
         while not self._stop_event.is_set():
-            if self.screenshot is not None:
+            if not self.frame_queue.empty():
                 detected_img = self.__detect_image()
-
-                self._lock.acquire()
-                self.detected_image = detected_img
-                self._lock.release()
+                self.detected_queue.put(detected_img)
 
     def __detect_image(self):
         """
@@ -85,10 +86,10 @@ class Vision:
         :return: The image with bounding box visualization of a bobber, if it's found
         """
 
-        image = self.screenshot
+        image = self.frame_queue.get()
 
         # verbose False to hide prediction log
-        results = self.model.predict(self.screenshot, stream=True, verbose=False)
+        results = self._model.predict(image, stream=True, verbose=True)
 
         for r in results:
             for box in r.boxes:
@@ -97,33 +98,33 @@ class Vision:
                     x1, y1, x2, y2 = [int(i) for i in box.xyxy[0]]
                     mid_x, mid_y = int((x1 + x2) / 2), int((y1 + y2) / 2)
 
-                    if not self._tracking_event.is_set():
-                        (x, y, w, h) = [int(i) for i in box.xywh[0]]
-                        self.tracker.init(image, (x, y, w, h))
-                        self._tracking_event.set()
-                    else:
-                        success, _ = self.tracker.update(image)
-                        if success:
-
-                            # Maybe later for the sake of performance only first coordinates of a bobber will be added
-                            if (mid_x, mid_y) not in self.coordinates:
-                                self.coordinates.append((mid_x, mid_y))
-
-                            if len(self.coordinates) > 1:
-                                prev_x, prev_y = self.coordinates[-2]
-                                diff_x, diff_y = abs(mid_x - prev_x), abs(mid_y - prev_y)
-
-                                # TODO Fix the problem when bot implementation. This condition need to be calibrated,
-                                #  because the difference of coordinates is registered before bobber reaches water.
-                                if (diff_x > 2 or diff_y > 2) and not (diff_x > 6 or diff_y > 6):
-                                    print("Coordinate difference exceeds"
-                                          f"\n diff_x {diff_x}"
-                                          f"\n diff_y {diff_y}")
-
-                                    pyautogui.mouseDown()
-                                    pyautogui.mouseUp()
-
-                                    self.coordinates.clear()
+                    # if not self._tracking_event.is_set():
+                    #     (x, y, w, h) = [int(i) for i in box.xywh[0]]
+                    #     self.tracker.init(image, (x, y, w, h))
+                    #     self._tracking_event.set()
+                    # else:
+                    #     success, _ = self.tracker.update(image)
+                    #     if success:
+                    #
+                    #         # Maybe later for the sake of performance only first coordinates of a bobber will be added
+                    #         if (mid_x, mid_y) not in self.coordinates:
+                    #             self.coordinates.append((mid_x, mid_y))
+                    #
+                    #         if len(self.coordinates) > 1:
+                    #             prev_x, prev_y = self.coordinates[-2]
+                    #             diff_x, diff_y = abs(mid_x - prev_x), abs(mid_y - prev_y)
+                    #
+                    #             # TODO Fix the problem when bot implementation. This condition need to be calibrated,
+                    #             #  because the difference of coordinates is registered before bobber reaches water.
+                    #             if (diff_x > 2 or diff_y > 2) and not (diff_x > 6 or diff_y > 6):
+                    #                 print("Coordinate difference exceeds"
+                    #                       f"\n diff_x {diff_x}"
+                    #                       f"\n diff_y {diff_y}")
+                    #
+                    #                 pyautogui.mouseDown()
+                    #                 pyautogui.mouseUp()
+                    #
+                    #                 self.coordinates.clear()
 
                     # Bounding box visualization
                     cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 1)

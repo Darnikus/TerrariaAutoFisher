@@ -1,6 +1,6 @@
 import numpy as np
 import win32gui, win32ui, win32con
-from threading import Thread, Lock, Event
+from multiprocessing import Process, Queue, Event
 
 
 class WindowCapturer:
@@ -18,7 +18,7 @@ class WindowCapturer:
     int: The number of title pixels to exclude from the captured window.
     """
 
-    def __init__(self, window_name: str):
+    def __init__(self, window_name: str, frame_queue: Queue):
         """
         Initialize the WindowCapturer instance.
 
@@ -27,20 +27,22 @@ class WindowCapturer:
                             it's recommended to use the immutable part of it.
         :type: str
 
+        :param frame_queue: The queue for the process to store frames
+        :type: Queue
+
         :raises Exception: If the window isn't found.
         """
 
-        # creating a lock object for thread
-        self._lock = Lock()
+        # process properties
+        self._process = None
         self._stop_event = Event()
+        self.frame_queue = frame_queue
 
-        self.screenshot = None
-
-        self.hwnd = self.__get_hwnd_by_partial_name(window_name)
-        if not self.hwnd:
+        self._hwnd = self.__get_hwnd_by_partial_name(window_name)
+        if not self._hwnd:
             raise Exception('Window is not found: {}'.format(window_name))
 
-        window_rect = win32gui.GetWindowRect(self.hwnd)
+        window_rect = win32gui.GetWindowRect(self._hwnd)
         self.width = window_rect[2] - window_rect[0]
         self.height = window_rect[3] - window_rect[1]
 
@@ -53,33 +55,30 @@ class WindowCapturer:
         self.offset_x = window_rect[0] + self.cropped_x
         self.offset_y = window_rect[1] + self.cropped_y
 
-    # Declaring thread methods
+    # Declaring process methods
     def start(self):
         """
-        Start the capturing thread.
+        Start the capturing process.
         """
 
-        thread = Thread(target=self.__run)
-        thread.start()
+        self._process = Process(target=self._run)
+        self._process.start()
 
     def stop(self):
         """
-        Stop the capturing thread.
+        Stop the capturing process.
         """
 
         self._stop_event.set()
+        self._process.terminate()
 
-    def __run(self):
+    def _run(self):
         """
         Main capturing loop.
         """
-
         while not self._stop_event.is_set():
             screenshot = self.__get_screenshot()
-
-            self._lock.acquire()
-            self.screenshot = screenshot
-            self._lock.release()
+            self.frame_queue.put(screenshot)
 
     def get_screen_position(self, position):
         """
@@ -107,7 +106,7 @@ class WindowCapturer:
         """
 
         # get the window data
-        wDC = win32gui.GetWindowDC(self.hwnd)
+        wDC = win32gui.GetWindowDC(self._hwnd)
         dcObj = win32ui.CreateDCFromHandle(wDC)
         cDC = dcObj.CreateCompatibleDC()
         data_bit_map = win32ui.CreateBitmap()
@@ -123,7 +122,7 @@ class WindowCapturer:
         # Free Resources
         dcObj.DeleteDC()
         cDC.DeleteDC()
-        win32gui.ReleaseDC(self.hwnd, wDC)
+        win32gui.ReleaseDC(self._hwnd, wDC)
         win32gui.DeleteObject(data_bit_map.GetHandle())
 
         # drop the alpha channel to cv.matchTemplate() not throw an error

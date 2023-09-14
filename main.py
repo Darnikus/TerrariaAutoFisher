@@ -1,5 +1,5 @@
+from multiprocessing import Queue
 from time import time
-
 import cv2 as cv
 
 from vision import Vision
@@ -9,21 +9,18 @@ if __name__ == '__main__':
     DEBUG = True
 
     window_name = "Terraria:"
-    vision = Vision()
-    capturer = WindowCapturer(window_name)
+    frame_queue = Queue(maxsize=1)
+    detected_queue = Queue(maxsize=1)
+
+    vision = Vision(frame_queue, detected_queue)
+    capturer = WindowCapturer(window_name, frame_queue)
 
     vision.start()
     capturer.start()
 
     loop_time = time()
     while True:
-        if capturer.screenshot is None:
-            continue
-
-        vision.update(capturer.screenshot)
-
-        if vision.detected_image is None:
-            print('stuck here')
+        if capturer.frame_queue.empty():
             continue
 
         # show loop fps is faster than model process a picture
@@ -39,7 +36,7 @@ if __name__ == '__main__':
 
         if DEBUG:
             # display debug window
-            cv.imshow('Debug window', vision.detected_image)
+            cv.imshow('Debug window', vision.detected_queue.get())
 
         if cv.waitKey(1) == ord('q'):
             cv.destroyAllWindows()
