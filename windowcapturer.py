@@ -36,7 +36,7 @@ class WindowCapturer:
         # process properties
         self._process = None
         self._stop_event = Event()
-        self.frame_queue = frame_queue
+        self._frame_queue = frame_queue
 
         self._hwnd = self.__get_hwnd_by_partial_name(window_name)
         if not self._hwnd:
@@ -78,7 +78,7 @@ class WindowCapturer:
         """
         while not self._stop_event.is_set():
             screenshot = self.__get_screenshot()
-            self.frame_queue.put(screenshot)
+            self._frame_queue.put(screenshot)
 
     def get_screen_position(self, position):
         """
