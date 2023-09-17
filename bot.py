@@ -1,8 +1,10 @@
+import multiprocessing
 import time
 from abc import ABC, abstractmethod
 from multiprocessing import Process, Queue, Event
 
 import cv2
+import keyboard
 import pyautogui
 
 
@@ -169,6 +171,10 @@ class FisherBot:
         self.coordinates = []
         self.is_bobber_stabilized = False
 
+        self._is_paused_event = Event()
+        self._pause_lock = multiprocessing.Lock()
+        keyboard.add_hotkey('ctrl+alt', self.pause)
+
         self.set_state(InitializingState())
 
     def set_state(self, state: State):
@@ -200,10 +206,32 @@ class FisherBot:
         self._stop_event.set()
         self._process.terminate()
 
+    def pause(self):
+        """
+        Pause the bot process
+        """
+
+        # Pause the worker process
+        with self._pause_lock:
+            if not self._is_paused_event.is_set():
+                self._is_paused_event.set()
+                # Wait for the worker to acknowledge the pause
+                time.sleep(0.1)
+                print("Paused.")
+
+            # Clear the pause event to resume the worker
+            else:
+                self._is_paused_event.clear()
+                print("Resumed.")
+
     def _run(self):
         """
         Main bot loop
         """
 
         while not self._stop_event.is_set():
-            self._state.run()
+            with self._pause_lock:
+                if self._is_paused_event.is_set():
+                    self._is_paused_event.wait()
+                else:
+                    self._state.run()

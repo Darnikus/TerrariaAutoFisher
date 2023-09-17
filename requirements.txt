@@ -4,3 +4,4 @@ pywin32==306
 pandas~=2.0.2
 ultralytics==8.0.162
 pyautogui==0.9.54
+keyboard==0.13.5

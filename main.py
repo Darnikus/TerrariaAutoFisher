@@ -1,6 +1,7 @@
 from multiprocessing import Queue
 
 import cv2 as cv
+import keyboard
 
 from bot import FisherBot
 from vision import Vision
@@ -91,11 +92,13 @@ if __name__ == '__main__':
             # display debug window
             cv.imshow('Debug window', draw_visualization(frame_queue.get(), detected_queue.get()))
 
-        if cv.waitKey(1) == ord('q'):
+        if keyboard.is_pressed("alt+q"):
             cv.destroyAllWindows()
             capturer.stop()
             vision.stop()
             bot.stop()
-            break
+            exit(0)
+
+        cv.waitKey(1)
 
     print('Done')
