@@ -1,6 +1,8 @@
+import logging
 import multiprocessing
 import time
 from abc import ABC, abstractmethod
+from datetime import datetime
 from multiprocessing import Process, Queue, Event
 
 import cv2
@@ -52,6 +54,9 @@ class InitializingState(State):
     Initializing state of the bot. Wait till the model is ready to be used, then change to the Throwing state.
     """
 
+    def __init__(self):
+        logging.info('The bot is initializing. Please wait a bit.')
+
     def run(self):
         if self.bot.tracker is None:
             self.bot.tracker = cv2.TrackerMIL_create()
@@ -66,6 +71,7 @@ class ThrowingState(State):
     """
 
     def run(self):
+        print('{} The bot is throwing a bobber'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         pyautogui.mouseDown()
         pyautogui.mouseUp()
 
@@ -96,17 +102,20 @@ class BitingState(State):
                         self.bot.coordinates.append((mid_x, mid_y))
 
                     if len(self.bot.coordinates) > 1:
-                        print(self.bot.coordinates)
+                        # print(self.bot.coordinates)
                         prev_x, prev_y = self.bot.coordinates[-2]
                         diff_x, diff_y = abs(mid_x - prev_x), abs(mid_y - prev_y)
 
                         if diff_x <= 1 and diff_y <= 1 and not self.bot.is_bobber_stabilized:
                             self.bot.is_bobber_stabilized = True
+                            print(
+                                '{} The bot is waiting for a fish'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
                         if (diff_x > 2 or diff_y > 1) and (diff_x < 8 or diff_y < 8) and self.bot.is_bobber_stabilized:
-                            print("Coordinate difference exceeds"
-                                  f"\n diff_x {diff_x}"
-                                  f"\n diff_y {diff_y}")
+                            # print("Coordinate difference exceeds"
+                            #               f"\n diff_x {diff_x}"
+                            #               f"\n diff_y {diff_y}")
+                            print('{} A fish caught the bite'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
 
                             self.bot.coordinates.clear()
                             self.bot.is_bobber_stabilized = False
@@ -120,6 +129,7 @@ class CatchingState(State):
     """
 
     def run(self):
+        print('{} The bot is catching a fish'.format(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
         pyautogui.mouseDown()
         pyautogui.mouseUp()
 
@@ -184,7 +194,7 @@ class FisherBot:
         :param state: An instance of the State pattern's implementations.
         """
 
-        print(f"Bot: Transitioning to {type(state).__name__}")
+        # print(f"Bot: Transitioning to {type(state).__name__}")
 
         self._state = state
         self._state.bot = self
@@ -215,14 +225,16 @@ class FisherBot:
         with self._pause_lock:
             if not self._is_paused_event.is_set():
                 self._is_paused_event.set()
+
                 # Wait for the worker to acknowledge the pause
                 time.sleep(0.1)
-                print("Paused.")
+
+                logging.info('The bot has been paused. To resume the bot press CTRL + ALT')
 
             # Clear the pause event to resume the worker
             else:
                 self._is_paused_event.clear()
-                print("Resumed.")
+                logging.info('The bot has been resumed')
 
     def _run(self):
         """

@@ -1,3 +1,4 @@
+import logging
 from multiprocessing import Queue
 
 import cv2 as cv
@@ -60,6 +61,14 @@ def draw_visualization(image, coordinates):
 if __name__ == '__main__':
     DEBUG = True
 
+    if DEBUG:
+        format_text = "%(asctime)s %(name)s %(levelname)s %(message)s"
+    else:
+        format_text = "%(asctime)s %(message)s"
+
+    logging.basicConfig(level=logging.INFO, format=format_text, datefmt='%Y-%m-%d %H:%M:%S')
+    logging.info('To pause the bot press CTRL + ALT\n To exit press ALT + Q')
+
     window_name = "Terraria:"
     frame_queue = Queue(maxsize=1)
     detected_queue = Queue(maxsize=2)
@@ -97,8 +106,7 @@ if __name__ == '__main__':
             capturer.stop()
             vision.stop()
             bot.stop()
+            logging.info('Goodbye, that was a great fishing.')
             exit(0)
 
         cv.waitKey(1)
-
-    print('Done')
