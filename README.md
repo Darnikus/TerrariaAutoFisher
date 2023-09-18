@@ -1,13 +1,11 @@
-<h1 style="align-self: center">
-  <a href="https://github.com/{{cookiecutter.github_username}}/{{cookiecutter.repo_slug}}">
-    <!-- Please provide path to your logo here -->
-    <img src="banner.png" alt="Logo">
-  </a>
-</h1>
+<div align="center">
+    <img src="banner.png" alt="Logo" width="800" height="400">
+</div>
 
 <h1 align="center">Terraria Auto Fisher</h1>
 
----
+![GitHub license](https://img.shields.io/github/license/Darnikus/TerrariaAutoFisher)
+![GitHub open issues](https://img.shields.io/github/issues/Darnikus/TerrariaAutoFisher)
 
 <details open="open" style="font-size: 18px">
 <summary>Table of Contents</summary>
@@ -94,3 +92,5 @@ Thanks for these guides that helped me start and finish this project
   4 hours video of how to work with YOLO.
 
 ## License
+
+[MIT License](LICENSE)

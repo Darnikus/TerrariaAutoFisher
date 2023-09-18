@@ -59,7 +59,7 @@ def draw_visualization(image, coordinates):
 
 
 if __name__ == '__main__':
-    DEBUG = True
+    DEBUG = False
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt='%Y-%m-%d %H:%M:%S')
     logging.info('To pause the bot press CTRL + ALT\n To exit press ALT + Q')
