@@ -61,12 +61,7 @@ def draw_visualization(image, coordinates):
 if __name__ == '__main__':
     DEBUG = True
 
-    if DEBUG:
-        format_text = "%(asctime)s %(name)s %(levelname)s %(message)s"
-    else:
-        format_text = "%(asctime)s %(message)s"
-
-    logging.basicConfig(level=logging.INFO, format=format_text, datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt='%Y-%m-%d %H:%M:%S')
     logging.info('To pause the bot press CTRL + ALT\n To exit press ALT + Q')
 
     window_name = "Terraria:"

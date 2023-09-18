@@ -59,7 +59,7 @@ class InitializingState(State):
 
     def run(self):
         if self.bot.tracker is None:
-            self.bot.tracker = cv2.TrackerMIL_create()
+            self.bot.tracker = cv2.TrackerMIL.create()
 
         if not self.bot.is_model_ready_queue.empty():
             self.bot.set_state(ThrowingState())
